@@ -4,6 +4,7 @@ import whisper
 import argparse
 import warnings
 import tempfile
+from whisper.tokenizer import LANGUAGES
 from .utils import filename, str2bool, write_srt
 
 
@@ -18,6 +19,8 @@ def main():
                         default=".", help="directory to save the outputs")
     parser.add_argument("--output_srt", type=str2bool, default=False,
                         help="whether to output the .srt file along with the video files")
+    parser.add_argument("--language", type=str,
+                        help=f"force the use of a chosen language: {list(LANGUAGES.keys())} {list(LANGUAGES.values())})")
     parser.add_argument("--srt_only", type=str2bool, default=False,
                         help="only generate the .srt file and not create overlayed video")
     parser.add_argument("--verbose", type=str2bool, default=False,
@@ -31,12 +34,20 @@ def main():
     output_dir: str = args.pop("output_dir")
     output_srt: bool = args.pop("output_srt")
     srt_only: bool = args.pop("srt_only")
+    language: str = args.pop("language")
     os.makedirs(output_dir, exist_ok=True)
+
+    if language not in LANGUAGES:
+        raise Exception(f'whisper: error: argument --language: invalid choice: {language} (choose from {list(LANGUAGES.keys())}) {list(LANGUAGES.values())}')
 
     if model_name.endswith(".en"):
         warnings.warn(
             f"{model_name} is an English-only model, forcing English detection.")
         args["language"] = "en"
+    elif language is not None:
+        warnings.warn(
+            f"You have forced the use of the {language} language.")
+        args["language"] = language
 
     model = whisper.load_model(model_name)
     audios = get_audio(args.pop("video"))
